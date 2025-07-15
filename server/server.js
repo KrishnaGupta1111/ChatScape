@@ -10,11 +10,11 @@ import { Server } from "socket.io";
 const app = express();
 const server = http.createServer(app);
 
-// ✅ CORS configuration
+// ✅ CORS configuration (FIXED)
 app.use(
   cors({
-    origin: "https://chat-scape.vercel.app", // Your frontend domain
-    credentials: true, // Enable if using cookies/sessions
+    origin: "https://chatscape11.vercel.app", // ✅ Corrected origin
+    credentials: true,
   })
 );
 
@@ -22,8 +22,9 @@ app.use(
 app.use(express.json({ limit: "4mb" }));
 
 // ✅ Routes setup
+app.get("/", (req, res) => res.send("Welcome to ChatScape Backend!")); // optional
+app.get("/api/ping", (req, res) => res.send("pong")); // health check
 app.use("/api/status", (req, res) => res.send("Server is live"));
-app.use("/api/ping", (req, res) => res.send("pong")); // public health check
 app.use("/api/auth", userRouter);
 app.use("/api/messages", messageRouter);
 
