@@ -33,7 +33,7 @@ await connectDB();
 // ✅ Initialize socket.io server
 export const io = new Server(server, {
   cors: {
-    origin: "https://chat-scape.vercel.app", // frontend domain for WebSocket
+    origin: "https://chatscape11.vercel.app", // frontend domain for WebSocket
     credentials: true,
   },
 });
