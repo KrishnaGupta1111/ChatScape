@@ -13,7 +13,12 @@ const server = http.createServer(app);
 // ✅ CORS configuration (FIXED)
 app.use(
   cors({
-    origin: "https://chatscape11.vercel.app", // ✅ Corrected origin
+    origin: [
+      "https://chatscape11.vercel.app", // production frontend
+      "http://localhost:5173", // local Vite dev server
+      "http://localhost:3000",
+      "http://localhost:5177" // common React dev server
+    ],
     credentials: true,
   })
 );
@@ -34,7 +39,12 @@ await connectDB();
 // ✅ Initialize socket.io server
 export const io = new Server(server, {
   cors: {
-    origin: "https://chatscape11.vercel.app", // frontend domain for WebSocket
+    origin: [
+      "https://chatscape11.vercel.app",
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://localhost:5177",
+    ],
     credentials: true,
   },
 });
@@ -59,5 +69,5 @@ io.on("connection", (socket) => {
 });
 
 // ✅ Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => console.log("Server is running on PORT: " + PORT));
