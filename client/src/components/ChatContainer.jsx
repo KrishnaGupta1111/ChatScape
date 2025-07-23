@@ -1,60 +1,152 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
-import assets  from '../assets/assets'
-import { formatMessageTime } from '../lib/utils';
-import { ChatContext } from '../../context/ChatContext.jsx';
-import { AuthContext } from '../../context/AuthContext.jsx';
-import toast from 'react-hot-toast';
+import React, { useContext, useEffect, useRef, useState } from "react";
+import assets from "../assets/assets";
+import { formatMessageTime } from "../lib/utils";
+import { ChatContext } from "../../context/ChatContext.jsx";
+import { AuthContext } from "../../context/AuthContext.jsx";
+import toast from "react-hot-toast";
+import CallModal from "./CallModal";
+import io from "socket.io-client";
+import {
+  startLocalStream,
+  getLocalStream,
+  getRemoteStream,
+  createPeerConnection,
+  createOffer,
+  createAnswer,
+  setRemoteDescription,
+  addIceCandidate,
+  closeConnection,
+} from "../lib/webrtc";
 
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
 
+const ChatContainer = ({
+  isCallModalOpen,
+  setIsCallModalOpen,
+  callType,
+  setCallType,
+  localStream,
+  setLocalStream,
+  remoteStream,
+  setRemoteStream,
+  callLoading,
+  setCallLoading,
+  isVideoCall,
+  setIsVideoCall,
+  callFrom,
+  setCallFrom,
+  socketRef,
+}) => {
+  const { messages, selectedUser, setSelectedUser, sendMessage, getMessages } =
+    useContext(ChatContext);
+  const { authUser, onlineUsers } = useContext(AuthContext);
 
-const ChatContainer = () => {
+  const scrollEnd = useRef();
 
-const {messages,selectedUser,setSelectedUser,sendMessage,getMessages}=useContext(ChatContext);
-const {authUser ,onlineUsers}=useContext(AuthContext);
+  const [input, setInput] = useState("");
 
-const scrollEnd=useRef();
+  const selectedUserId = selectedUser?._id;
 
-const[input ,setInput]=useState('');
+  // Dummy avatars for now
+  const localAvatar = authUser?.profilePic || assets.avatar_icon;
+  const remoteAvatar = selectedUser?.profilePic || assets.avatar_icon;
 
-//Handle sending a message
-const handleSendMessage=async(e)=>{
-  e.preventDefault();
-  if(input.trim()=== "") 
-    return null;
-  await sendMessage({text:input.trim()});
-  setInput("")
-}
+  // --- OUTGOING CALL ---
+  const handleStartVideoCall = async () => {
+    await startCall(true);
+  };
+  const handleStartVoiceCall = async () => {
+    await startCall(false);
+  };
+  const startCall = async (video) => {
+    if (!selectedUserId) return;
+    setIsVideoCall(video);
+    setCallType("outgoing");
+    setIsCallModalOpen(true);
+    setCallLoading(true);
+    const local = await startLocalStream(video);
+    setLocalStream(local);
+    createPeerConnection(
+      (candidate) => {
+        socketRef.current.emit("ice-candidate", {
+          targetUserId: selectedUserId,
+          candidate,
+        });
+      },
+      (remote) => setRemoteStream(remote)
+    );
+    const offer = await createOffer();
+    // Add a 'video' flag to offer for call type
+    offer.video = video;
+    socketRef.current.emit("call-user", {
+      targetUserId: selectedUserId,
+      offer,
+    });
+  };
 
+  // --- HANG UP / END CALL ---
+  const handleEndCall = () => {
+    setIsCallModalOpen(false);
+    setCallType(null);
+    setCallFrom(null);
+    setLocalStream(null);
+    setRemoteStream(null);
+    setCallLoading(false);
+    closeConnection();
+    // Notify peer if outgoing or in call
+    if (callType === "outgoing" && selectedUserId) {
+      socketRef.current.emit("end-call", { targetUserId: selectedUserId });
+    } else if (callType === "incoming" && callFrom) {
+      socketRef.current.emit("end-call", { targetUserId: callFrom });
+    }
+  };
 
+  // --- MODAL PROPS ---
+  const modalLocalStream = localStream;
+  const modalRemoteStream = remoteStream;
+  const modalLocalAvatar = localAvatar;
+  const modalRemoteAvatar =
+    callType === "incoming"
+      ? selectedUser?._id === callFrom
+        ? selectedUser?.profilePic
+        : assets.avatar_icon
+      : remoteAvatar;
 
+  //Handle sending a message
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (input.trim() === "") return null;
+    await sendMessage({ text: input.trim() });
+    setInput("");
+  };
 
-//Handle sending an image
-const handleSendImage=async(e)=>{
-  const file=e.target.files[0];
-  if(!file || !file.type.startsWith("image/")){
-    toast.error("select an image file")
-    return;
-  }
-  const reader=new FileReader();
+  //Handle sending an image
+  const handleSendImage = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !file.type.startsWith("image/")) {
+      toast.error("select an image file");
+      return;
+    }
+    const reader = new FileReader();
 
-  reader.onloadend=async()=>{
-    await sendMessage({image:reader.result})
-    e.target.value=""
-  }
-  reader.readAsDataURL(file)
-}
+    reader.onloadend = async () => {
+      await sendMessage({ image: reader.result });
+      e.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
 
-useEffect(()=>{
-  if(selectedUser){
-    getMessages(selectedUser._id)
-  }
-},[selectedUser])
+  useEffect(() => {
+    if (selectedUser) {
+      getMessages(selectedUser._id);
+    }
+  }, [selectedUser]);
 
-useEffect(()=>{
-  if(scrollEnd.current && messages){
-    scrollEnd.current.scrollIntoView({behavior:"smooth"})
-  }
-},[messages])
+  useEffect(() => {
+    if (scrollEnd.current && messages) {
+      scrollEnd.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   return selectedUser ? (
     <div className="h-full overflow-scroll relative backdrop-blur-lg">
@@ -71,14 +163,30 @@ useEffect(()=>{
           )}
         </p>
         <button
-          onClick={() => console.log("Start video call")}
+          onClick={handleStartVideoCall}
           className="bg-transparent p-1 hover:bg-white/20 rounded-full"
         >
-          <img
-            src={assets.video_icon2}
-            alt="Video Call"
-            className="w-6 h-6"
-          />
+          <img src={assets.video_icon2} alt="Video Call" className="w-6 h-6" />
+        </button>
+        {/* Phone (Voice Call) Button */}
+        <button
+          onClick={handleStartVoiceCall}
+          className="bg-transparent p-1 hover:bg-white/20 rounded-full ml-1"
+          title="Voice Call"
+        >
+          {/* Inline SVG for phone icon */}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-6 h-6 text-white"
+          >
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.07 8.63 19.86 19.86 0 0 1 0 0.18 2 2 0 0 1 2 0h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.68 2.35a2 2 0 0 1-.45 2.11l-1.27 1.27a16 16 0 0 0 6.29 6.29l1.27-1.27a2 2 0 0 1 2.11-.45c.75.32 1.54.55 2.35.68A2 2 0 0 1 22 16.92z" />
+          </svg>
         </button>
 
         <img
@@ -165,6 +273,7 @@ useEffect(()=>{
           className="w-7 cursor-pointer"
         />
       </div>
+      {/* Call Modal is now handled globally in HomePage, not here */}
     </div>
   ) : (
     <div className="flex flex-col items-center justify-center gap-2 text-gray-500 bg-white/10 max-md:hidden">
@@ -172,6 +281,6 @@ useEffect(()=>{
       <p className="text-lg font-medium text-white">Chat anytime ,anywhere</p>
     </div>
   );
-}
+};
 
-export default ChatContainer
+export default ChatContainer;

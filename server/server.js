@@ -17,7 +17,7 @@ app.use(
       "https://chatscape11.vercel.app", // production frontend
       "http://localhost:5173", // local Vite dev server
       "http://localhost:3000",
-      "http://localhost:5177" // common React dev server
+      "http://localhost:5177", // common React dev server
     ],
     credentials: true,
   })
@@ -65,6 +65,55 @@ io.on("connection", (socket) => {
     console.log("User Disconnected", userId);
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  });
+
+  socket.on("call-user", ({ targetUserId, offer }) => {
+    const targetSocketId = userSocketMap[targetUserId];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call-made", {
+        from: userId,
+        offer,
+      });
+    }
+  });
+
+  socket.on("answer-call", ({ targetUserId, answer }) => {
+    const targetSocketId = userSocketMap[targetUserId];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call-answered", {
+        from: userId,
+        answer,
+      });
+    }
+  });
+
+  socket.on("ice-candidate", ({ targetUserId, candidate }) => {
+    const targetSocketId = userSocketMap[targetUserId];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("ice-candidate", {
+        from: userId,
+        candidate,
+      });
+    }
+  });
+
+  socket.on("end-call", ({ targetUserId }) => {
+    const targetSocketId = userSocketMap[targetUserId];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call-ended", {
+        from: userId,
+      });
+    }
+  });
+
+  // Handle call rejection
+  socket.on("reject-call", ({ targetUserId }) => {
+    const targetSocketId = userSocketMap[targetUserId];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call-rejected", {
+        from: userId,
+      });
+    }
   });
 });
 
