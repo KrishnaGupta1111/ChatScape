@@ -16,8 +16,7 @@ app.use(
     origin: [
       "https://chatscape11.vercel.app", // production frontend
       "http://localhost:5173", // local Vite dev server
-      "http://localhost:3000",
-      "http://localhost:5177", // common React dev server
+      
     ],
     credentials: true,
   })
@@ -42,8 +41,7 @@ export const io = new Server(server, {
     origin: [
       "https://chatscape11.vercel.app",
       "http://localhost:5173",
-      "http://localhost:3000",
-      "http://localhost:5177",
+    
     ],
     credentials: true,
   },
