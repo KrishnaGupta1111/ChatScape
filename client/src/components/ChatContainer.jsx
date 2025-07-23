@@ -18,7 +18,7 @@ import {
   closeConnection,
 } from "../lib/webrtc";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
+const SOCKET_URL = import.meta.env.VITE_BACKEND_URL;
 
 const ChatContainer = ({
   isCallModalOpen,

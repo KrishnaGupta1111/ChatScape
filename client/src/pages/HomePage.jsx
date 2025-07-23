@@ -16,7 +16,7 @@ import {
 import toast from "react-hot-toast";
 import ringtoneSound from "../assets/ringtone.mp3";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
+const SOCKET_URL = import.meta.env.VITE_BACKEND_URL;
 
 const HomePage = () => {
   const { selectedUser, users } = useContext(ChatContext);
