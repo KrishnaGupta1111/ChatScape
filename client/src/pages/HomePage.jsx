@@ -14,11 +14,12 @@ import {
   closeConnection,
 } from "../lib/webrtc";
 import toast from "react-hot-toast";
+import ringtoneSound from "../assets/ringtone.mp3";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
 
 const HomePage = () => {
-  const { selectedUser } = useContext(ChatContext);
+  const { selectedUser, users } = useContext(ChatContext);
   const { authUser } = useContext(AuthContext);
 
   // Incoming call state
@@ -31,6 +32,26 @@ const HomePage = () => {
   const [isVideoCall, setIsVideoCall] = useState(true);
   const [callFrom, setCallFrom] = useState(null);
   const socketRef = useRef();
+  const audioRef = useRef();
+
+  // Play/stop ringtone on incoming call
+  useEffect(() => {
+    if (incomingCall && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+    } else if (!incomingCall && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, [incomingCall]);
+
+  // Also stop ringtone when call modal opens (accepted)
+  useEffect(() => {
+    if (isCallModalOpen && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, [isCallModalOpen]);
 
   useEffect(() => {
     if (!authUser?._id) return;
@@ -53,7 +74,7 @@ const HomePage = () => {
       setLocalStream(null);
       setRemoteStream(null);
       setCallLoading(false);
-      setIncomingCall(null);
+      setIncomingCall(null); // <-- Ensure incoming call notification is cleared
       closeConnection();
     });
 
@@ -114,7 +135,7 @@ const HomePage = () => {
     setIncomingCall(null);
   };
 
-  // End call (from modal)
+  // End call (from modal or caller cuts before answer)
   const handleEndCall = () => {
     setIsCallModalOpen(false);
     setCallType(null);
@@ -122,11 +143,23 @@ const HomePage = () => {
     setLocalStream(null);
     setRemoteStream(null);
     setCallLoading(false);
+    setIncomingCall(null); // <-- Ensure incoming call notification is cleared
     closeConnection();
     if (callType === "incoming" && callFrom) {
       socketRef.current.emit("end-call", { targetUserId: callFrom });
     }
+    // If caller cancels before callee answers, notify callee
+    if (callType === "outgoing" && selectedUser) {
+      socketRef.current.emit("end-call", { targetUserId: selectedUser._id });
+    }
   };
+
+  // Get caller's name from users array
+  let callerName = null;
+  if (incomingCall && users && users.length > 0) {
+    const caller = users.find((u) => u._id === incomingCall.from);
+    callerName = caller ? caller.fullName : incomingCall.from;
+  }
 
   return (
     <div className="border w-full h-screen sm:px-[15%] sm:py-[5%]">
@@ -163,28 +196,53 @@ const HomePage = () => {
       </div>
       {/* Incoming call notification (global, not per user) */}
       {incomingCall && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center items-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 flex flex-col items-center">
-            <p className="text-lg font-semibold mb-2">
-              Incoming {incomingCall.isVideo ? "Video" : "Voice"} Call
-            </p>
-            <p className="mb-4">User {incomingCall.from} is calling you...</p>
-            <div className="flex gap-4">
-              <button
-                onClick={handleAcceptCall}
-                className="bg-green-500 text-white px-4 py-2 rounded"
-              >
-                Accept
-              </button>
-              <button
-                onClick={handleRejectCall}
-                className="bg-red-500 text-white px-4 py-2 rounded"
-              >
-                Reject
-              </button>
+        <>
+          <audio ref={audioRef} src={ringtoneSound} loop />
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+            <div className="bg-gradient-to-br from-[#282142] to-[#8185b2]/80 rounded-2xl shadow-2xl p-8 flex flex-col items-center w-[90vw] max-w-xs sm:max-w-sm md:max-w-md border-2 border-violet-500">
+              <div className="flex flex-col items-center gap-2 w-full">
+                <div className="w-16 h-16 rounded-full bg-violet-500 flex items-center justify-center mb-2 shadow-lg">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-8 h-8 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 10l4.553-2.276A2 2 0 0021 6.382V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-1.382a2 2 0 00-1.447-1.942L15 14M10 9v6m4-6v6"
+                    />
+                  </svg>
+                </div>
+                <p className="text-lg font-semibold text-white mb-1 text-center">
+                  Incoming {incomingCall.isVideo ? "Video" : "Voice"} Call
+                </p>
+                <p className="mb-4 text-gray-200 text-center text-sm">
+                  {callerName
+                    ? `${callerName} is calling you...`
+                    : `User is calling you...`}
+                </p>
+                <div className="flex gap-4 w-full justify-center mt-2">
+                  <button
+                    onClick={handleAcceptCall}
+                    className="flex-1 py-2 rounded-full bg-gradient-to-r from-green-400 to-green-600 text-white font-bold shadow-md hover:scale-105 transition-transform text-base"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={handleRejectCall}
+                    className="flex-1 py-2 rounded-full bg-gradient-to-r from-red-400 to-red-600 text-white font-bold shadow-md hover:scale-105 transition-transform text-base"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
       {/* Call Modal for accepted/active call */}
       <CallModal

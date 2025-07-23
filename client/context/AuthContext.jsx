@@ -78,13 +78,24 @@ export const AuthProvider = ({ children }) => {
   //Connect socket function to handle socket connection and online users updates
   const connectSocket = (userData) => {
     if (!userData || socket?.connected) return;
+    console.log("[connectSocket] Connecting socket for userId:", userData._id);
     const newSocket = io(backendUrl, {
       query: {
         userId: userData._id,
       },
+      transports: ["websocket"],
     });
     newSocket.connect();
     setSocket(newSocket);
+
+    newSocket.on("connect", () => {
+      console.log(
+        "[socket connected]",
+        newSocket.id,
+        "for userId:",
+        userData._id
+      );
+    });
 
     newSocket.on("getOnlineUsers", (userIds) => {
       setOnlineUsers(userIds);
