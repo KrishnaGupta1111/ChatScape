@@ -102,6 +102,15 @@ const CallModal = ({
               />
               <span className="text-xs text-gray-300">You</span>
             </div>
+            {/* Audio element for remote stream in voice call */}
+            {!isVideoCall && remoteStream && (
+              <audio
+                ref={(el) => {
+                  if (el && remoteStream) el.srcObject = remoteStream;
+                }}
+                autoPlay
+              />
+            )}
           </div>
         )}
         {/* Hang up button at center bottom */}

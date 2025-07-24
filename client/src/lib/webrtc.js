@@ -30,6 +30,9 @@ export function getRemoteStream() {
 export function createPeerConnection(onIceCandidate, onTrack) {
   peerConnection = new RTCPeerConnection(iceServers);
 
+  // Always create a new remote stream for each call
+  remoteStream = new MediaStream();
+
   peerConnection.onicecandidate = (event) => {
     if (event.candidate && onIceCandidate) {
       onIceCandidate(event.candidate);
@@ -37,9 +40,6 @@ export function createPeerConnection(onIceCandidate, onTrack) {
   };
 
   peerConnection.ontrack = (event) => {
-    if (!remoteStream) {
-      remoteStream = new MediaStream();
-    }
     remoteStream.addTrack(event.track);
     if (onTrack) onTrack(remoteStream);
   };
