@@ -34,6 +34,7 @@ const HomePage = () => {
   const [callFrom, setCallFrom] = useState(null);
   const socketRef = useRef();
   const audioRef = useRef();
+  const pendingCandidates = useRef([]); // <-- Add this at the top of HomePage
 
   // Play/stop ringtone on incoming call
   useEffect(() => {
@@ -77,6 +78,7 @@ const HomePage = () => {
       setCallLoading(false);
       setIncomingCall(null); // <-- Ensure incoming call notification is cleared
       closeConnection();
+      pendingCandidates.current = [];
     });
 
     // Call rejected (notify caller)
@@ -90,17 +92,37 @@ const HomePage = () => {
       setCallLoading(false);
       setIncomingCall(null);
       closeConnection();
+      pendingCandidates.current = [];
     });
 
     // --- FIX: Handle answer from callee (for caller) ---
     socket.on("answer-call", async ({ answer }) => {
       await setRemoteDescription(answer);
+      // Add all pending ICE candidates after remote description is set
+      while (pendingCandidates.current.length > 0) {
+        const candidate = pendingCandidates.current.shift();
+        await addIceCandidate(candidate);
+      }
     });
 
     // --- FIX: Handle ICE candidates from the other peer ---
     socket.on("ice-candidate", async ({ candidate }) => {
       if (candidate) {
-        await addIceCandidate(candidate);
+        // Check if remote description is set
+        const pc = window.peerConnection || null;
+        if (
+          (window.peerConnection &&
+            window.peerConnection.remoteDescription &&
+            window.peerConnection.remoteDescription.type) ||
+          (typeof peerConnection !== "undefined" &&
+            peerConnection &&
+            peerConnection.remoteDescription &&
+            peerConnection.remoteDescription.type)
+        ) {
+          await addIceCandidate(candidate);
+        } else {
+          pendingCandidates.current.push(candidate);
+        }
       }
     });
 
@@ -111,6 +133,7 @@ const HomePage = () => {
       socket.off("answer-call"); // cleanup
       socket.off("ice-candidate"); // cleanup
       socket.disconnect();
+      pendingCandidates.current = [];
     };
   }, [authUser?._id]);
 
@@ -136,6 +159,11 @@ const HomePage = () => {
       (remote) => setRemoteStream(remote)
     );
     await setRemoteDescription(incomingCall.offer);
+    // Add all pending ICE candidates after remote description is set
+    while (pendingCandidates.current.length > 0) {
+      const candidate = pendingCandidates.current.shift();
+      await addIceCandidate(candidate);
+    }
     const answer = await createAnswer();
     socketRef.current.emit("answer-call", {
       targetUserId: incomingCall.from,
