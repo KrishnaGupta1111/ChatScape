@@ -1,6 +1,6 @@
 
 ## 💬📞 ChatScape – Real-Time Chat & Calling Application
-[![Screenshot-2025-07-18-235259.png](https://i.postimg.cc/FHbxJBb4/Screenshot-2025-07-18-235259.png)](https://postimg.cc/bZJn7LFC)
+[![Screenshot-2025-07-24-000248.png](https://i.postimg.cc/fLRVW9FQ/Screenshot-2025-07-24-000248.png)](https://postimg.cc/67FWYytM)
 
 **ChatScape** is a full-stack **real-time chat application** built using the MERN stack, enabling users to chat instantly, initiate voice/video calls, and communicate securely — all within a responsive, modern UI.
 
