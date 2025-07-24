@@ -16,7 +16,6 @@ app.use(
     origin: [
       "https://chatscape11.vercel.app", // production frontend
       "http://localhost:5173", // local Vite dev server
-      
     ],
     credentials: true,
   })
@@ -38,11 +37,7 @@ await connectDB();
 // ✅ Initialize socket.io server
 export const io = new Server(server, {
   cors: {
-    origin: [
-      "https://chatscape11.vercel.app",
-      "http://localhost:5173",
-    
-    ],
+    origin: ["https://chatscape11.vercel.app", "http://localhost:5173"],
     credentials: true,
   },
 });
@@ -78,7 +73,8 @@ io.on("connection", (socket) => {
   socket.on("answer-call", ({ targetUserId, answer }) => {
     const targetSocketId = userSocketMap[targetUserId];
     if (targetSocketId) {
-      io.to(targetSocketId).emit("call-answered", {
+      // FIX: Use 'answer-call' event name to match frontend
+      io.to(targetSocketId).emit("answer-call", {
         from: userId,
         answer,
       });
