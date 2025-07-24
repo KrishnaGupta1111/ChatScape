@@ -12,6 +12,7 @@ import {
   setRemoteDescription,
   createAnswer,
   closeConnection,
+  addIceCandidate, // <-- add this import
 } from "../lib/webrtc";
 import toast from "react-hot-toast";
 import ringtoneSound from "../assets/ringtone.mp3";
@@ -91,7 +92,24 @@ const HomePage = () => {
       closeConnection();
     });
 
+    // --- FIX: Handle answer from callee (for caller) ---
+    socket.on("answer-call", async ({ answer }) => {
+      await setRemoteDescription(answer);
+    });
+
+    // --- FIX: Handle ICE candidates from the other peer ---
+    socket.on("ice-candidate", async ({ candidate }) => {
+      if (candidate) {
+        await addIceCandidate(candidate);
+      }
+    });
+
     return () => {
+      socket.off("call-made");
+      socket.off("call-ended");
+      socket.off("call-rejected");
+      socket.off("answer-call"); // cleanup
+      socket.off("ice-candidate"); // cleanup
       socket.disconnect();
     };
   }, [authUser?._id]);
