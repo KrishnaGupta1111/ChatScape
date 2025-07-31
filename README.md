@@ -8,7 +8,7 @@ Built with **Socket.IO and WebRTC**, it provides sub-second latency for real-tim
 
 
 
-## ✨ Features
+## ✨ Features 
 
 
 💬 Real-Time Messaging using Socket.IO
@@ -25,7 +25,7 @@ Built with **Socket.IO and WebRTC**, it provides sub-second latency for real-tim
 
 🧾 Chat History stored with MongoDB
 
-🔄 Auto Refresh and Typing Indicators
+🔄 Auto Refresh and Typing Indicator
 
 ## 🔗 Demo
 
