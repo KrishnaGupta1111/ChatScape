@@ -115,6 +115,14 @@ io.on("connection", (socket) => {
       });
     }
   });
+
+  // Typing indicator
+  socket.on("typing", ({ to }) => {
+    const targetSocketId = userSocketMap[to];
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("typing", { from: userId, to });
+    }
+  });
 });
 
 // ✅ Start server

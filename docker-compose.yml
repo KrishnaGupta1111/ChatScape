@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: chatscape-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: chat-app
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - chatscape-network
+
+  # Backend Server
+  backend:
+    build: ./server
+    container_name: chatscape-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-5001}
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-password123}@mongodb:27017
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-your-cloudinary-cloud-name}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-your-cloudinary-api-key}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-your-cloudinary-api-secret}
+    ports:
+      - "${PORT:-5001}:${PORT:-5001}"
+    depends_on:
+      - mongodb
+    networks:
+      - chatscape-network
+
+  # Frontend Client
+  frontend:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    container_name: chatscape-frontend
+    restart: unless-stopped
+    environment:
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:5001}
+      - VITE_SOCKET_URL=${VITE_SOCKET_URL:-http://localhost:5001}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - chatscape-network
+
+# Volumes
+volumes:
+  mongodb_data:
+    driver: local
+
+# Networks
+networks:
+  chatscape-network:
+    driver: bridge 
