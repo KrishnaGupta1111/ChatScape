@@ -5,13 +5,13 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy package files first (for better caching)
-COPY package*.json ./
+COPY client/package*.json ./
 
 # Install dependencies
 RUN npm install
 
 # Copy all source code
-COPY . .
+COPY client/ .
 
 # Build the React app for production
 RUN npm run build
