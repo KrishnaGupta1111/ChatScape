@@ -1,65 +1,64 @@
 version: '3.8'
 
 services:
-  # MongoDB Database
   mongodb:
     image: mongo:7.0
     container_name: chatscape-mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: chat-app
-    ports:
-      - "27017:27017"
     volumes:
       - mongodb_data:/data/db
     networks:
       - chatscape-network
 
-  # Backend Server
   backend:
     build: ./server
     container_name: chatscape-backend
     restart: unless-stopped
     environment:
-      - NODE_ENV=${NODE_ENV:-production}
-      - PORT=${PORT:-5001}
-      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-password123}@mongodb:27017/chat-app?authSource=admin
-      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
-      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-your-cloudinary-cloud-name}
-      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-your-cloudinary-api-key}
-      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-your-cloudinary-api-secret}
-    ports:
-      - "${PORT:-5001}:${PORT:-5001}"
+      NODE_ENV: production
+      PORT: ${PORT}
+      MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/chat-app?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     depends_on:
       - mongodb
     networks:
       - chatscape-network
 
-  # Frontend Client
   frontend:
-    build:
-      context: .
-      dockerfile: client/Dockerfile
+    build: ./client
     container_name: chatscape-frontend
     restart: unless-stopped
-    environment:
-      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:5001}
-      - VITE_SOCKET_URL=${VITE_SOCKET_URL:-http://localhost:5001}
-    ports:
-      - "80:80"
+    # No environment variables needed here anymore since we use relative paths
+    # No ports needed here, Nginx will handle traffic
     depends_on:
       - backend
     networks:
       - chatscape-network
 
-# Volumes
+  nginx:
+    image: nginx:latest
+    container_name: chatscape-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - chatscape-network
+
 volumes:
   mongodb_data:
-    driver: local
 
-# Networks
 networks:
   chatscape-network:
-    driver: bridge 
+    driver: bridge

@@ -5,8 +5,7 @@ import toast from "react-hot-toast";
 import { useEffect } from "react";
 import { io } from "socket.io-client";
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-axios.defaults.baseURL = backendUrl;
+axios.defaults.baseURL = "/";
 
 export const AuthContext = createContext();
 
@@ -79,7 +78,7 @@ export const AuthProvider = ({ children }) => {
   const connectSocket = (userData) => {
     if (!userData || socket?.connected) return;
     console.log("[connectSocket] Connecting socket for userId:", userData._id);
-    const newSocket = io(backendUrl, {
+    const newSocket = io({ // Connect to the same host that serves the page
       query: {
         userId: userData._id,
       },
@@ -106,6 +105,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       axios.defaults.headers.common["token"] = token;
     }
+  
     checkAuth();
   }, []);
 

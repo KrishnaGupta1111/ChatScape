@@ -14,6 +14,7 @@ const server = http.createServer(app);
 app.use(
   cors({
     origin: [
+      "http://13.60.251.72", // Deployed on EC2
       "https://chatscape11.vercel.app", // production frontend
       "http://localhost:5173", // local Vite dev server
       "http://localhost:3000",
@@ -40,6 +41,7 @@ await connectDB();
 export const io = new Server(server, {
   cors: {
     origin: [
+      "http://13.60.251.72", // Deployed on EC2
       "https://chatscape11.vercel.app",
       "http://localhost:5173",
       "http://localhost:3000",
