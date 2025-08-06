@@ -25,7 +25,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=${PORT:-5001}
-      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-password123}@mongodb:27017
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-password123}@mongodb:27017/chat-app?authSource=admin
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-your-cloudinary-cloud-name}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-your-cloudinary-api-key}
