@@ -35,7 +35,8 @@ services:
     build: ./client
     container_name: chatscape-frontend
     # This container's only job is to build the files and put them in the volume.
-    # It doesn't need to run, so no restart policy or ports are needed.
+    # We add a do-nothing command to prevent an error on startup.
+    command: ["/bin/true"]
     volumes:
       - frontend_build:/app/dist
 
